@@ -4,6 +4,9 @@ import com.google.gson.reflect.TypeToken;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -11,9 +14,7 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -31,6 +32,12 @@ public class Main {
         List<Employee> listXml = parseXML("data.xml");
         String json2 = listToJson(listXml);
         writeString(json2, "data2.json");
+
+        String jsonNew = readString("new_data.json");
+        List<Employee> list = jsonToList(jsonNew);
+        for (Employee employee : list) {
+            System.out.println(employee);
+        }
     }
 
     private static List<Employee> parseCSV (String[] columnMapping, String fileName) {
@@ -47,7 +54,7 @@ public class Main {
 
             return csvToBean.parse();
         } catch (IOException e) {
-            throw new RuntimeException("Не удалось прочитать" + fileName, e);
+            throw new RuntimeException("Не удалось прочитать " + fileName, e);
         }
     }
 
@@ -64,7 +71,7 @@ public class Main {
         try (FileWriter writer = new FileWriter(fileName)) {
             writer.write(json);
         } catch (IOException e) {
-            throw new RuntimeException("Не удалось записать" + fileName, e);
+            throw new RuntimeException("Не удалось записать " + fileName, e);
         }
     }
 
@@ -93,6 +100,39 @@ public class Main {
             }
         } catch (Exception e) {
             throw new RuntimeException("Не удалось разобрать " + fileName, e);
+        }
+        return employees;
+    }
+
+    private static String readString(String fileName) {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Не удалось прочитать " + fileName, e);
+        }
+        return sb.toString();
+    }
+
+    private static List<Employee> jsonToList(String json) {
+        List<Employee> employees = new ArrayList<>();
+        JSONParser parser = new JSONParser();
+
+        try {
+            JSONArray jsonArray = (JSONArray) parser.parse(json);
+            GsonBuilder builder = new GsonBuilder();
+            Gson gson = builder.create();
+
+            for (Object item : jsonArray) {
+                JSONObject jsonObject = (JSONObject) item;
+                Employee employee = gson.fromJson(jsonObject.toJSONString(), Employee.class);
+                employees.add(employee);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Не удалось разобрать JSON", e);
         }
         return employees;
     }
